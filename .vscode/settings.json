@@ -1,0 +1,5 @@
+{
+	"typescript.preferences.includePackageJsonAutoImports": "on",
+	"typescript.autoImportSuggestions.enabled": true,
+  "typescript.suggest.autoImports": true
+}
