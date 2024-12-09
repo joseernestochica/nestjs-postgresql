@@ -8,14 +8,14 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { HandleErrorService } from 'src/common/services';
 import { JwtStrategy } from './strategies';
-import { User } from './entities';
+import { RefreshToken, User } from './entities';
 
 @Module( {
   controllers: [ AuthController ],
   providers: [ AuthService, HandleErrorService, JwtStrategy ],
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature( [ User ] ),
+    TypeOrmModule.forFeature( [ User, RefreshToken ] ),
     PassportModule.register( {
       defaultStrategy: 'jwt'
     } ),

@@ -1,21 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto, LoginUserDto } from './dto';
+import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto } from './dto';
 import { HandleErrorService } from 'src/common/services';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtPayload } from './interfaces';
 import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
-import { User } from './entities';
+import { Repository, MoreThan } from 'typeorm';
+import { RefreshToken, User } from './entities';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
 
   constructor (
+
+    @InjectRepository( RefreshToken )
+    private readonly refreshTokenRepository: Repository<RefreshToken>,
+
     @InjectRepository( User )
     private readonly userRepository: Repository<User>,
     private readonly handleErrorService: HandleErrorService,
     private readonly jwtService: JwtService
+
   ) { }
 
   private getJwtToken ( payload: JwtPayload ): string {
@@ -45,7 +50,18 @@ export class AuthService {
 
   }
 
-  async login ( loginUserDto: LoginUserDto ) {
+  async getOne ( id: string ): Promise<User> {
+
+    const user = await this.userRepository.findOne( { where: { id } } );
+
+    if ( !user ) {
+      this.handleErrorService.handleNotFoundException( 'User not found' );
+    }
+    return user;
+
+  }
+
+  async login ( loginUserDto: LoginUserDto, ip?: string ) {
 
     const { email, password } = loginUserDto;
 
@@ -75,6 +91,20 @@ export class AuthService {
       ...user,
       token: this.getJwtToken( { id: user.id } )
     };
+
+  }
+
+  async refreshToken ( refreshToken: CreateRefreshTokenDto ): Promise<any> {
+
+    const { token, userId, ip } = refreshToken;
+
+    const count = await this.refreshTokenRepository.count( { where: { user: userId, token, expires: MoreThan( new Date ) } } );
+    if ( count === 0 ) {
+      this.handleErrorService.handleUnautorizedException( 'Invalid token' );
+    }
+
+    const userDb = await this.getOne( userId );
+    return await this.login( userDb, ip );
 
   }
 

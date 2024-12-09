@@ -1,5 +1,6 @@
 import { Product } from 'src/products/entities';
 import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
+import { RefreshToken } from './';
 import * as bcrypt from 'bcrypt';
 
 @Entity( 'users' )
@@ -28,6 +29,12 @@ export class User {
 		( product ) => product.user
 	)
 	product: Product;
+
+	@OneToMany(
+		() => RefreshToken,
+		( refreshToken ) => refreshToken.user
+	)
+	refreshToken: RefreshToken;
 
 	@BeforeInsert()
 	@BeforeUpdate()
