@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto } from './dto';
+import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto, UpdateRefreshTokenDto } from './dto';
 import { HandleErrorService } from 'src/common/services';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtPayload } from './interfaces';
 import { JwtService } from '@nestjs/jwt';
 import { Repository, MoreThan } from 'typeorm';
 import { RefreshToken, User } from './entities';
+import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -26,6 +27,31 @@ export class AuthService {
   private getJwtToken ( payload: JwtPayload ): string {
 
     return this.jwtService.sign( payload );
+
+  }
+
+  private async createRefreshToken ( user: User, ip: string ): Promise<string> {
+
+    try {
+
+      await this.refreshTokenRepository.delete( { user: user } );
+      const refreshTokenUid = uuidv4();
+
+      const refreshTokenBody: RefreshToken = {
+        user: user,
+        token: refreshTokenUid,
+        created: new Date(),
+        expires: new Date( Date.now() + 7 * 24 * 60 * 60 * 1000 ),
+        ip
+      };
+
+      const refreshToken = this.refreshTokenRepository.create( refreshTokenBody as Object );
+      await this.refreshTokenRepository.save( refreshToken );
+      return refreshTokenUid;
+
+    } catch ( error ) {
+      this.handleErrorService.handleDBException( error );
+    }
 
   }
 
@@ -61,7 +87,7 @@ export class AuthService {
 
   }
 
-  async login ( loginUserDto: LoginUserDto, ip?: string ) {
+  async login ( loginUserDto: LoginUserDto, ip?: string, isHashed = false ): Promise<any> {
 
     const { email, password } = loginUserDto;
 
@@ -74,13 +100,23 @@ export class AuthService {
       this.handleErrorService.handleUnautorizedException( 'User not found (email)' );
     }
 
-    if ( !bcrypt.compareSync( password, user.password ) ) {
-      this.handleErrorService.handleUnautorizedException( 'Invalid password' );
+    if ( !isHashed ) {
+      if ( !bcrypt.compareSync( password, user.password ) ) {
+        this.handleErrorService.handleUnautorizedException( 'Invalid password' );
+      }
+    } else {
+      if ( password !== user.password ) {
+        this.handleErrorService.handleUnautorizedException( 'Invalid password' );
+      }
     }
+
+    const refreshTokenUid = await this.createRefreshToken( user, ip );
+    delete user.password;
 
     return {
       ...user,
-      token: this.getJwtToken( { id: user.id } )
+      token: this.getJwtToken( { id: user.id } ),
+      refreshToken: refreshTokenUid
     };
 
   }
@@ -94,17 +130,20 @@ export class AuthService {
 
   }
 
-  async refreshToken ( refreshToken: CreateRefreshTokenDto ): Promise<any> {
+  async refreshToken ( updateTokenDto: UpdateRefreshTokenDto ): Promise<any> {
 
-    const { token, userId, ip } = refreshToken;
+    const { refreshToken, userId, ip } = updateTokenDto;
 
-    const count = await this.refreshTokenRepository.count( { where: { user: userId, token, expires: MoreThan( new Date ) } } );
+    const userDb = await this.getOne( userId );
+
+    const count = await this.refreshTokenRepository.count(
+      { where: { user: userDb, token: refreshToken, expires: MoreThan( new Date ) } }
+    );
     if ( count === 0 ) {
       this.handleErrorService.handleUnautorizedException( 'Invalid token' );
     }
 
-    const userDb = await this.getOne( userId );
-    return await this.login( userDb, ip );
+    return await this.login( userDb, ip, true );
 
   }
 

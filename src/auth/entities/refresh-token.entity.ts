@@ -5,7 +5,7 @@ import { User } from "./";
 export class RefreshToken {
 
 	@PrimaryGeneratedColumn()
-	id: number;
+	id?: number;
 
 	@Column( { type: 'varchar', nullable: false, length: '64' } )
 	token: string;
@@ -22,7 +22,7 @@ export class RefreshToken {
 	@ManyToOne( ( type ) => User, ( user ) => user.id, {
 		onDelete: 'CASCADE', eager: true
 	} )
-	@JoinColumn( { name: 'userId' } )
-	user: string;
+	// @JoinColumn( { name: 'userId' } )
+	user: User;
 
 }

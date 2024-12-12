@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 
 import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto } from './dto';
+import { CreateUserDto, LoginUserDto, UpdateRefreshTokenDto } from './dto';
 import { GetUser, RoleProtected, Auth } from './decorators';
 import { User } from './entities';
 import { UserRoleGuard } from './guards';
@@ -70,6 +70,21 @@ export class AuthController {
       message: 'This is a private route 2',
       ok: true,
       user
+    };
+
+  }
+
+  @Post( 'refresh-token' )
+  async refreshToken (
+    @Body() updateTokenDto: UpdateRefreshTokenDto
+  ) {
+
+    const data = await this.authService.refreshToken( updateTokenDto );
+
+    return {
+      message: 'Refresh token ok',
+      statusCode: 200,
+      data
     };
 
   }
