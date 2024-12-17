@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto, UpdateRefreshTokenDto } from './dto';
-import { HandleErrorService } from 'src/common/services';
 import { InjectRepository } from '@nestjs/typeorm';
-import { JwtPayload } from './interfaces';
 import { JwtService } from '@nestjs/jwt';
 import { Repository, MoreThan } from 'typeorm';
+
+import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto, UpdateRefreshTokenDto } from './dto';
+import { GetParamsDto } from 'src/common/dto';
+import { HandleErrorService } from 'src/common/services';
+import { JwtPayload } from './interfaces';
 import { RefreshToken, User } from './entities';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
+import { GetParams, GetResponse } from 'src/common/interfaces';
+import { createQueryBuilder } from 'src/common/helpers';
 
 @Injectable()
 export class AuthService {
@@ -76,14 +80,65 @@ export class AuthService {
 
   }
 
-  async getOne ( id: string ): Promise<User> {
+  async findAll ( getParamsDto: GetParamsDto ): Promise<GetResponse<User>> {
+
+    const getParams: GetParams = {};
+    getParams.page = getParamsDto.page;
+    getParams.limit = getParamsDto.limit;
+    getParams.sort = { column: getParamsDto.sortColumn || 'id', direction: getParamsDto.sortDirection || 'DESC' };
+    getParams.select = getParamsDto.select && getParamsDto.select !== '' ? getParamsDto.select.split( '|' ) : [];
+    getParams.search = getParamsDto.search && getParamsDto.search.trim() !== '' ? getParamsDto.search.trim() : undefined;
+
+    if ( getParams.search ) {
+      getParams.where = {
+        query: `user.fullName LIKE :s 
+          OR user.email LIKE :s`,
+        params: {
+          s: `%${ getParams.search }%`,
+        }
+      };
+    }
+
+    getParams.andWhere = [];
+    if ( getParamsDto.sgStr1 && getParamsDto.sgStr1.trim() !== '' ) {
+      getParams.andWhere.push( { field: 'email', value: getParamsDto.sgStr1.trim() } );
+    }
+    if ( getParamsDto.sgStr2 && getParamsDto.sgStr2.trim() !== '' ) {
+      getParams.andWhere.push( { field: 'fullName', value: getParamsDto.sgStr2.trim() } );
+    }
+    if ( getParamsDto.sgInt1 ) {
+      getParams.andWhere.push( { field: 'isActive', value: getParamsDto.sgInt1 === 1 ? true : false } );
+    }
+
+    const getResponse = await createQueryBuilder<User>( this.userRepository, getParams, 'user' );
+    if ( !getResponse || ( getResponse.data as User[] ).length === 0 ) {
+      this.handleErrorService.handleNotFoundException( 'Users not found' );
+    }
+
+    ( getResponse.data as User[] ).forEach( user => delete user.password );
+
+    getResponse.message = 'Users list';
+    getResponse.statusCode = 200;
+
+    return getResponse;
+
+  }
+
+  async findOne ( id: string ): Promise<GetResponse<User>> {
 
     const user = await this.userRepository.findOne( { where: { id } } );
 
     if ( !user ) {
       this.handleErrorService.handleNotFoundException( 'User not found' );
     }
-    return user;
+
+    delete user.password;
+
+    return {
+      data: user,
+      message: 'User found',
+      statusCode: 200
+    };
 
   }
 
@@ -134,16 +189,16 @@ export class AuthService {
 
     const { refreshToken, userId, ip } = updateTokenDto;
 
-    const userDb = await this.getOne( userId );
+    const userDb = await this.findOne( userId );
 
     const count = await this.refreshTokenRepository.count(
-      { where: { user: userDb, token: refreshToken, expires: MoreThan( new Date ) } }
+      { where: { user: userDb.data as User, token: refreshToken, expires: MoreThan( new Date ) } }
     );
     if ( count === 0 ) {
       this.handleErrorService.handleUnautorizedException( 'Invalid token' );
     }
 
-    return await this.login( userDb, ip, true );
+    return await this.login( userDb.data as LoginUserDto, ip, true );
 
   }
 

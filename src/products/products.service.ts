@@ -3,7 +3,7 @@ import { Injectable, InternalServerErrorException, Logger, BadRequestException, 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product, ProductImage } from './entities';
 import { Repository, DataSource } from 'typeorm';
-import { PaginationDto } from 'src/common/dto';
+import { GetParamsDto } from 'src/common/dto';
 import { validate as isUUID } from 'uuid';
 import { HandleErrorService } from 'src/common/services';
 import { User } from 'src/auth/entities';
@@ -46,15 +46,15 @@ export class ProductsService {
 
   }
 
-  async findAll ( paginationDto: PaginationDto ) {
+  async findAll ( getParamsDto: GetParamsDto ) {
 
     try {
 
-      const { limit = 10, offset = 0 } = paginationDto;
+      const { limit = 10, page = 0 } = getParamsDto;
 
       const products = await this.productRepository.find( {
         take: limit,
-        skip: offset,
+        skip: page,
         relations: [ 'images' ]
       } );
 

@@ -3,7 +3,7 @@ import { ApiTags, ApiResponse } from '@nestjs/swagger';
 
 import { Auth, GetUser, ValidRoles } from 'src/auth/decorators';
 import { CreateProductDto, UpdateProductDto } from './dto';
-import { PaginationDto } from 'src/common/dto';
+import { GetParamsDto } from 'src/common/dto';
 import { Product } from './entities';
 import { ProductsService } from './products.service';
 import { User } from 'src/auth/entities';
@@ -26,8 +26,8 @@ export class ProductsController {
   }
 
   @Get()
-  findAll ( @Query() paginationDto: PaginationDto ) {
-    return this.productsService.findAll( paginationDto );
+  findAll ( @Query() getParamsDto: GetParamsDto ) {
+    return this.productsService.findAll( getParamsDto );
   }
 
   @Get( ':term' )

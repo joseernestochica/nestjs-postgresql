@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req, SetMetadata } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseUUIDPipe } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -8,12 +8,38 @@ import { GetUser, RoleProtected, Auth } from './decorators';
 import { User } from './entities';
 import { UserRoleGuard } from './guards';
 import { ValidRoles } from './interfaces';
+import { GetParamsDto } from 'src/common/dto';
 
 @ApiTags( 'Auth' )
 @Controller( 'auth' )
 export class AuthController {
 
   constructor ( private readonly authService: AuthService ) { }
+
+  @Get( 'users' )
+  @Auth( ValidRoles.admin )
+  findAll ( @Query() getParamsDto: GetParamsDto ) {
+
+    return this.authService.findAll( getParamsDto );
+
+  }
+
+  @Get( 'user-admin/:id' )
+  @Auth( ValidRoles.admin )
+  findOneAdmin ( @Param( 'id', ParseUUIDPipe ) id: string ) {
+
+    return this.authService.findOne( id );
+
+  }
+
+  @Get( 'user' )
+  @Auth( ValidRoles.user )
+  findOneUser ( @GetUser() user: User ) {
+
+    const { id } = user;
+    return this.authService.findOne( id );
+
+  }
 
   @Post( 'register' )
   createUser ( @Body() createUserDto: CreateUserDto ) {

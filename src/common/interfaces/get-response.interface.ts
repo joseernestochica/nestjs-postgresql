@@ -1,9 +1,11 @@
 
 export interface GetResponse<T> {
 
-	data?: T[];
+	data?: T[] | T;
 	total?: number;
 	page?: number;
-	last_page?: number;
+	lastPage?: number;
+	message?: string;
+	statusCode?: number;
 
 }
