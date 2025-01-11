@@ -1,5 +1,6 @@
 {
 	"typescript.preferences.includePackageJsonAutoImports": "on",
 	"typescript.autoImportSuggestions.enabled": true,
-  "typescript.suggest.autoImports": true
+	"typescript.suggest.autoImports": true,
+	"chat.editor.fontSize": 14
 }
