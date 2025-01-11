@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 
 import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto, UpdateRefreshTokenDto } from './dto';
+import { CreateUserDto, LoginUserDto, UpdateRefreshTokenDto, UpdateUserDto } from './dto';
 import { GetUser, RoleProtected, Auth } from './decorators';
 import { User } from './entities';
 import { UserRoleGuard } from './guards';
@@ -112,6 +112,28 @@ export class AuthController {
       statusCode: 200,
       data
     };
+
+  }
+
+  @Patch( 'user-admin/:id' )
+  @Auth( ValidRoles.admin )
+  updateAdmin (
+    @Param( 'id', ParseUUIDPipe ) id: string,
+    @Body() updateUserDto: UpdateUserDto
+  ) {
+
+    return this.authService.update( id, updateUserDto );
+
+  }
+
+  @Patch( 'user' )
+  @Auth( ValidRoles.user, ValidRoles.admin )
+  updateUser (
+    @GetUser() user: User,
+    @Body() updateUserDto: UpdateUserDto
+  ) {
+
+    return this.authService.update( user.id, updateUserDto );
 
   }
 

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository, MoreThan } from 'typeorm';
 
-import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto, UpdateRefreshTokenDto } from './dto';
+import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto, UpdateRefreshTokenDto, UpdateUserDto } from './dto';
 import { GetParamsDto } from 'src/common/dto';
 import { HandleErrorService } from 'src/common/services';
 import { JwtPayload } from './interfaces';
@@ -200,6 +200,42 @@ export class AuthService {
 
     return await this.login( userDb.data as LoginUserDto, ip, true );
 
+  }
+
+  async update ( id: string, updateUserDto: UpdateUserDto ): Promise<GetResponse<User>> {
+    try {
+
+      // Buscar el usuario
+      const user = ( await this.findOne( id ) ).data as User;
+
+      if ( !user )
+        throw new NotFoundException( `Usuario con ID ${ id } no encontrado` );
+
+      if ( updateUserDto.password ) {
+        updateUserDto.password = bcrypt.hashSync( updateUserDto.password, 10 );
+      }
+
+      // Actualizar el usuario
+      const updatedUser = await this.userRepository.preload( {
+        id,
+        ...updateUserDto
+      } );
+
+      // Guardar los cambios
+      await this.userRepository.save( updatedUser );
+
+      // Eliminar la contraseña del objeto de respuesta
+      delete updatedUser.password;
+
+      return {
+        data: updatedUser,
+        message: 'Usuario actualizado correctamente',
+        statusCode: 200
+      };
+
+    } catch ( error ) {
+      this.handleErrorService.handleDBException( error );
+    }
   }
 
 }
