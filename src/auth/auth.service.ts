@@ -238,4 +238,55 @@ export class AuthService {
     }
   }
 
+  async deleteUserSoft ( id: string ): Promise<GetResponse<User>> {
+    try {
+
+      const user = ( await this.findOne( id ) ).data as User;
+
+      if ( !user )
+        throw new NotFoundException( `Usuario con ID ${ id } no encontrado` );
+
+      const deactivatedUser = await this.userRepository.preload( {
+        id,
+        isDeleted: true
+      } );
+
+      await this.userRepository.save( deactivatedUser );
+
+      delete deactivatedUser.password;
+
+      return {
+        data: deactivatedUser,
+        message: 'Usuario desactivado correctamente',
+        statusCode: 200
+      };
+
+    } catch ( error ) {
+      this.handleErrorService.handleDBException( error );
+    }
+  }
+
+  async deleteUserHard ( id: string ): Promise<GetResponse<User>> {
+    try {
+
+      const user = ( await this.findOne( id ) ).data as User;
+
+      if ( !user ) {
+        throw new NotFoundException( `Usuario con ID ${ id } no encontrado` );
+      }
+
+      // Eliminar el usuario definitivamente
+      await this.userRepository.remove( user );
+
+      return {
+        data: user,
+        message: 'Usuario eliminado permanentemente',
+        statusCode: 200
+      };
+
+    } catch ( error ) {
+      this.handleErrorService.handleDBException( error );
+    }
+  }
+
 }

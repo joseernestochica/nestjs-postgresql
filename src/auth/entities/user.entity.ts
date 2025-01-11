@@ -2,6 +2,7 @@ import { Product } from 'src/products/entities';
 import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
 import { RefreshToken } from './';
 import * as bcrypt from 'bcrypt';
+import { UserImage } from './user-image.entity';
 
 @Entity( 'users' )
 export class User {
@@ -21,6 +22,9 @@ export class User {
 	@Column( 'bool', { default: true } )
 	isActive: boolean;
 
+	@Column( 'bool', { default: false } )
+	isDeleted: boolean;
+
 	@Column( 'text', { array: true, default: [ 'user' ] } )
 	roles: string[];
 
@@ -35,6 +39,12 @@ export class User {
 		( refreshToken ) => refreshToken.user
 	)
 	refreshToken: RefreshToken;
+
+	@OneToMany(
+		() => UserImage,
+		( userImage ) => userImage.user
+	)
+	images: UserImage[];
 
 	@BeforeInsert()
 	@BeforeUpdate()

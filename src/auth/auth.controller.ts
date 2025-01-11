@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseUUIDPipe, Patch, Delete } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -137,6 +137,13 @@ export class AuthController {
 
   }
 
+  @Delete( 'user/:id' )
+  @Auth( ValidRoles.admin )
+  deleteAdmin (
+    @Param( 'id', ParseUUIDPipe ) id: string
+  ) {
+    return this.authService.deleteUserHard( id );
+  }
 
 }
 

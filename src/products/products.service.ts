@@ -1,5 +1,5 @@
 import { CreateProductDto, UpdateProductDto } from './dto';
-import { Injectable, InternalServerErrorException, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product, ProductImage } from './entities';
 import { Repository, DataSource } from 'typeorm';
