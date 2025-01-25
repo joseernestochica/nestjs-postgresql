@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { Controller, Post, UploadedFile, UseInterceptors, BadRequestException, Param, Get, Res } from '@nestjs/common';
+import { Controller, Post, UploadedFiles, UseInterceptors, BadRequestException, Param, Get, Res } from '@nestjs/common';
 import { diskStorage } from 'multer';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
+import * as fs from 'fs';
 
 import { FileService } from './file.service';
 import { fileFilter, fileNamer } from './helpers';
@@ -28,22 +29,39 @@ export class FileController {
 
   }
 
-  @Post( 'product' )
-  @UseInterceptors( FileInterceptor( 'file', {
+  @Post( 'product/:id' )
+  @UseInterceptors( FilesInterceptor( 'files', 10, {
     fileFilter: fileFilter,
     // limits: { fileSize: 1024 * 1024 },
     storage: diskStorage( {
-      destination: './static/products',
+      destination: ( req, file, callback ) => {
+        const id = req.params.id;
+        const directory = `./static/products/${ id }`;
+
+        // Eliminar directorio si existe
+        if ( fs.existsSync( directory ) ) {
+          fs.rmSync( directory, { recursive: true } );
+        }
+
+        // Crear nuevo directorio
+        fs.mkdirSync( directory, { recursive: true } );
+
+        callback( null, directory );
+      },
       filename: fileNamer,
     } )
   } ) )
-  uploadProductFile ( @UploadedFile() file: Express.Multer.File ) {
+  uploadProductFile ( @UploadedFiles() files: Array<Express.Multer.File>, @Param( 'id' ) id: string ) {
 
-    if ( !file ) { throw new BadRequestException( `File not permited o invalid` ); }
+    return this.fileService.insertProductImages( id, files );
 
-    const secureUrl = `${ this.configService.get( 'HOST_API' ) }/file/product/${ file.filename }`;
+    // if ( !files || files.length === 0 ) { throw new BadRequestException( 'No se han proporcionado archivos o no son válidos' ); }
 
-    return { fileName: secureUrl };
+    // const secureUrls = files.map( file => {
+    //   return `${ this.configService.get( 'HOST_API' ) }/file/product/${ file.filename }`;
+    // } );
+
+    // return { fileNames: secureUrls };
 
   }
 
