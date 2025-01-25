@@ -42,7 +42,8 @@ export class User {
 
 	@OneToMany(
 		() => UserImage,
-		( userImage ) => userImage.user
+		( userImage ) => userImage.user,
+		{ cascade: true, eager: true }
 	)
 	images: UserImage[];
 

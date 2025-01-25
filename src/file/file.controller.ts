@@ -39,4 +39,16 @@ export class FileController {
     return this.fileService.removeProductImages( productId );
   }
 
+  @Post( 'user/:id' )
+  @UploadDirFiles( 'users' )
+  uploadUserFile ( @UploadedFiles() files: Array<Express.Multer.File>, @Param( 'id' ) id: string ) {
+    return this.fileService.insertUserImages( id, files );
+  }
+
+  @Delete( 'user/:id' )
+  @DeleteDir( 'users' )
+  removeUserImages ( @Param( 'id' ) id: string ) {
+    return this.fileService.removeUserImages( id );
+  }
+
 }
