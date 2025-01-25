@@ -14,13 +14,14 @@ export class FileController {
     private readonly fileService: FileService,
   ) { }
 
-  @Get( 'product/:imageName' )
+  @Get( 'product/:imageName/:id' )
   getImageProduct (
     @Res() res: Response,
-    @Param( 'imageName' ) imageName: string
+    @Param( 'imageName' ) imageName: string,
+    @Param( 'id' ) id: string
   ) {
 
-    const path = this.fileService.getStaticImage( imageName, 'products' );
+    const path = this.fileService.getStaticImage( imageName, 'products', id );
     res.sendFile( path );
 
   }

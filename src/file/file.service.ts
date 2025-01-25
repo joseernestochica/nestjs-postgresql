@@ -18,12 +18,19 @@ export class FileService {
 		private readonly userRepository: Repository<User>,
 	) { }
 
-	getStaticImage ( imageName: string, type: string ): string {
+	getStaticImage ( imageName: string, type: string, id: string ): string {
 
-		const path = join( __dirname, '..', '..', 'static', type, imageName );
+		const path = join( __dirname, '..', '..', 'static', type, id, imageName );
 
 		if ( !existsSync( path ) ) {
-			throw new BadRequestException( `Image not found` );
+
+			const defaultImagePath = join( __dirname, '..', '..', 'static', 'blank.png' );
+			if ( !existsSync( defaultImagePath ) ) {
+				throw new BadRequestException( `Image not found and default image not available` );
+			}
+
+			return defaultImagePath;
+
 		}
 
 		return path;
