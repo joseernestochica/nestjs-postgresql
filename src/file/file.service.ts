@@ -4,7 +4,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { existsSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Product } from '../products/entities';
+import { Product, ProductImage } from '../products/entities';
+import { unlink } from 'fs/promises';
 
 @Injectable()
 export class FileService {
@@ -32,14 +33,39 @@ export class FileService {
 		if ( !files || files.length === 0 ) { this.handleErrorService.handleBadRequestException( `Images not found` ); }
 
 		const product = await this.productRepository.findOneBy( { id: productId } );
+		if ( !product ) { this.handleErrorService.handleBadRequestException( `Product not found` ); }
 
-		// product.images = files.map( file => file.filename );
+		const images = files.map( file => ( {
+			url: file.filename,
+			product: { id: productId }
+		} ) as ProductImage );
 
+		product.images = images;
 		await this.productRepository.save( product );
 
 		return {
 			message: 'Imágenes guardadas correctamente',
-			images: product.images
+			data: images.map( image => ( {
+				url: image.url
+			} ) )
+		};
+
+	}
+
+	async removeProductImages ( productId: string ) {
+
+		const product = await this.productRepository.findOneBy( { id: productId } );
+
+		if ( !product ) {
+			this.handleErrorService.handleBadRequestException( `Product not found` );
+		}
+
+		// Eliminar registros de la base de datos
+		product.images = [];
+		await this.productRepository.save( product );
+
+		return {
+			message: 'Imágenes eliminadas correctamente'
 		};
 
 	}
