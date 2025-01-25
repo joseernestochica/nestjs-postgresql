@@ -1,12 +1,7 @@
-import { ConfigService } from '@nestjs/config';
-import { Controller, Post, UploadedFiles, UseInterceptors, BadRequestException, Param, Get, Res, Delete, ParseUUIDPipe } from '@nestjs/common';
-import { diskStorage } from 'multer';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { Controller, Post, UploadedFiles, Param, Get, Res, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import * as fs from 'fs';
 
 import { FileService } from './file.service';
-import { fileFilter, fileNamer } from './helpers';
 import { Response } from 'express';
 import { UploadDirFiles } from './decorators';
 import { DeleteDir } from './decorators/delete-dir.decorator';
@@ -17,7 +12,6 @@ export class FileController {
 
   constructor (
     private readonly fileService: FileService,
-    private readonly configService: ConfigService,
   ) { }
 
   @Get( 'product/:imageName' )
