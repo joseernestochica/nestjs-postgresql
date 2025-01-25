@@ -6,7 +6,8 @@
 
 # Data
 /postgres
-/static
+/static/*
+!static/blank.png
 
 # Logs
 logs

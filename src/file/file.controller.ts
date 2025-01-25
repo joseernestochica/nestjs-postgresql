@@ -26,6 +26,18 @@ export class FileController {
 
   }
 
+  @Get( 'user/:imageName/:id' )
+  getImageUser (
+    @Res() res: Response,
+    @Param( 'imageName' ) imageName: string,
+    @Param( 'id' ) id: string
+  ) {
+
+    const path = this.fileService.getStaticImage( imageName, 'users', id );
+    res.sendFile( path );
+
+  }
+
   @Post( 'product/:id' )
   @UploadDirFiles( 'products' )
   uploadProductFile ( @UploadedFiles() files: Array<Express.Multer.File>, @Param( 'id' ) id: string ) {
