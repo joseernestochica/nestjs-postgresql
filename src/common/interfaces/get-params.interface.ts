@@ -1,4 +1,3 @@
-
 export interface GetParams {
 	page?: number;
 	limit?: number;
@@ -8,6 +7,7 @@ export interface GetParams {
 	search?: string;
 	andWhere?: AndWhereParams[];
 	orWhere?: AndWhereParams[];
+	relations?: string[];
 }
 
 export interface WhereParams {

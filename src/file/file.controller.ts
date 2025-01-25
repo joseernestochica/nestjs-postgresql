@@ -1,5 +1,7 @@
 import { Controller, Post, UploadedFiles, Param, Get, Res, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Auth } from '../auth/decorators';
+import { ValidRoles } from '../auth/interfaces';
 
 import { FileService } from './file.service';
 import { Response } from 'express';
@@ -39,12 +41,14 @@ export class FileController {
   }
 
   @Post( 'product/:id' )
+  @Auth( ValidRoles.user, ValidRoles.superUser, ValidRoles.admin )
   @UploadDirFiles( 'products' )
   uploadProductFile ( @UploadedFiles() files: Array<Express.Multer.File>, @Param( 'id' ) id: string ) {
     return this.fileService.insertProductImages( id, files );
   }
 
   @Delete( 'product/:id' )
+  @Auth( ValidRoles.user, ValidRoles.superUser, ValidRoles.admin )
   @DeleteDir( 'products' )
   removeProductImages (
     @Param( 'id', ParseUUIDPipe ) productId: string
@@ -53,12 +57,14 @@ export class FileController {
   }
 
   @Post( 'user/:id' )
+  @Auth( ValidRoles.user, ValidRoles.superUser, ValidRoles.admin )
   @UploadDirFiles( 'users' )
   uploadUserFile ( @UploadedFiles() files: Array<Express.Multer.File>, @Param( 'id' ) id: string ) {
     return this.fileService.insertUserImages( id, files );
   }
 
   @Delete( 'user/:id' )
+  @Auth( ValidRoles.user, ValidRoles.superUser, ValidRoles.admin )
   @DeleteDir( 'users' )
   removeUserImages ( @Param( 'id' ) id: string ) {
     return this.fileService.removeUserImages( id );

@@ -3,15 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository, MoreThan } from 'typeorm';
 
-import { CreateRefreshTokenDto, CreateUserDto, LoginUserDto, UpdateRefreshTokenDto, UpdateUserDto } from './dto';
+import { createQueryBuilder } from 'src/common/helpers';
+import { CreateUserDto, LoginUserDto, UpdateRefreshTokenDto, UpdateUserDto } from './dto';
+import { GetParams, GetResponse } from 'src/common/interfaces';
 import { GetParamsDto } from 'src/common/dto';
 import { HandleErrorService } from 'src/common/services';
 import { JwtPayload } from './interfaces';
 import { RefreshToken, User } from './entities';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
-import { GetParams, GetResponse } from 'src/common/interfaces';
-import { createQueryBuilder } from 'src/common/helpers';
 
 @Injectable()
 export class AuthService {
@@ -83,8 +83,8 @@ export class AuthService {
   async findAll ( getParamsDto: GetParamsDto ): Promise<GetResponse<User>> {
 
     const getParams: GetParams = {};
-    getParams.page = getParamsDto.page;
-    getParams.limit = getParamsDto.limit;
+    getParams.page = getParamsDto.page || 1;
+    getParams.limit = getParamsDto.limit || 10;
     getParams.sort = { column: getParamsDto.sortColumn || 'id', direction: getParamsDto.sortDirection || 'DESC' };
     getParams.select = getParamsDto.select && getParamsDto.select !== '' ? getParamsDto.select.split( '|' ) : [];
     getParams.search = getParamsDto.search && getParamsDto.search.trim() !== '' ? getParamsDto.search.trim() : undefined;
@@ -109,6 +109,9 @@ export class AuthService {
     if ( getParamsDto.sgInt1 ) {
       getParams.andWhere.push( { field: 'isActive', value: getParamsDto.sgInt1 === 1 ? true : false } );
     }
+
+    // Agregamos la relación de imágenes
+    getParams.relations = [ 'images' ];
 
     const getResponse = await createQueryBuilder<User>( this.userRepository, getParams, 'user' );
     if ( !getResponse || ( getResponse.data as User[] ).length === 0 ) {

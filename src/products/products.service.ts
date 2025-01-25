@@ -7,6 +7,8 @@ import { GetParamsDto } from 'src/common/dto';
 import { validate as isUUID } from 'uuid';
 import { HandleErrorService } from 'src/common/services';
 import { User } from 'src/auth/entities';
+import { GetParams, GetResponse } from 'src/common/interfaces';
+import { createQueryBuilder } from 'src/common/helpers';
 
 
 @Injectable()
@@ -46,19 +48,40 @@ export class ProductsService {
 
   }
 
-  async findAll ( getParamsDto: GetParamsDto ) {
+  async findAll ( getParamsDto: GetParamsDto ): Promise<GetResponse<Product>> {
 
     try {
 
-      const { limit = 10, page = 0 } = getParamsDto;
+      const getParams: GetParams = {};
+      getParams.page = getParamsDto.page || 1;
+      getParams.limit = getParamsDto.limit || 10;
+      getParams.sort = { column: getParamsDto.sortColumn || 'id', direction: getParamsDto.sortDirection || 'DESC' };
+      getParams.select = getParamsDto.select && getParamsDto.select !== '' ? getParamsDto.select.split( '|' ) : [];
+      getParams.search = getParamsDto.search && getParamsDto.search.trim() !== '' ? getParamsDto.search.trim() : undefined;
 
-      const products = await this.productRepository.find( {
-        take: limit,
-        skip: page,
-        relations: [ 'images' ]
-      } );
+      if ( getParams.search ) {
+        getParams.where = {
+          query: `product.title LIKE :s 
+          OR product.slug LIKE :s`,
+          params: {
+            s: `%${ getParams.search }%`,
+          }
+        };
+      }
 
-      return products.map( product => ( { ...product, images: product.images.map( image => image.url ) } ) );
+      // Agregamos la relación de imágenes
+      getParams.relations = [ 'images' ];
+
+      const getResponse = await createQueryBuilder<Product>( this.productRepository, getParams, 'product' );
+      if ( !getResponse || ( getResponse.data as Product[] ).length === 0 ) {
+        this.handleErrorService.handleNotFoundException( 'Products not found' );
+      }
+
+
+      getResponse.message = 'Products list';
+      getResponse.statusCode = 200;
+
+      return getResponse;
 
     }
     catch ( error ) {
@@ -67,18 +90,25 @@ export class ProductsService {
 
   }
 
-  async findOne ( term: string ) {
+  async findOne ( term: string ): Promise<GetResponse<Product>> {
 
     let product: Product;
 
     if ( isUUID( term ) ) {
-      product = await this.productRepository.findOneBy( { id: term } );
+      product = await this.productRepository.createQueryBuilder( 'product' )
+        .leftJoinAndSelect( 'product.images', 'productImages' )
+        .leftJoinAndSelect( 'product.user', 'user' )
+        .select( [ 'product', 'productImages.url', 'user.id', 'user.email' ] )
+        .where( 'product.id = :id', { id: term } )
+        .getOne();
     }
     else {
       const query = this.productRepository.createQueryBuilder( 'product' ); // alias is 'product'
       product = await query
         .where( 'LOWER(title) = LOWER(:title) OR slug =:title ', { title: term } )
         .leftJoinAndSelect( 'product.images', 'productImages' ) // alias is 'productImages'
+        .leftJoinAndSelect( 'product.user', 'user' )
+        .select( [ 'product', 'productImages.url', 'user.id', 'user.email' ] )
         .getOne();
     }
 
@@ -86,14 +116,11 @@ export class ProductsService {
       this.handleErrorService.handleNotFoundException( `Product with id ${ term } not found` );
     }
 
-    return product;
-
-  }
-
-  async findOnePlain ( term: string ) {
-
-    const { images = [], ...product } = await this.findOne( term );
-    return { ...product, images: images.map( image => image.url ) };
+    return {
+      data: product,
+      message: 'Product found',
+      statusCode: 200
+    };
 
   }
 
@@ -127,7 +154,7 @@ export class ProductsService {
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return this.findOnePlain( id );
+      return this.findOne( id );
 
     } catch ( error ) {
       await queryRunner.rollbackTransaction(); // Deshacer los cambios
@@ -138,12 +165,16 @@ export class ProductsService {
 
   async remove ( id: string ) {
 
-    const product = await this.findOne( id );
+    const { data } = await this.findOne( id );
+    const product = data as Product;  // Asegurar que es un Product
 
     await this.productRepository.remove( product );
-    return product;
 
-
+    return {
+      data: product,
+      message: 'Product deleted',
+      statusCode: 200
+    };
   }
 
   async removeAllProducts () {

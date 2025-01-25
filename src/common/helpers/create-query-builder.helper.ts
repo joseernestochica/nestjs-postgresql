@@ -48,6 +48,13 @@ export async function createQueryBuilder<T> ( repository: Repository<T>, getProp
 		builder.select( getProps.select.map( field => `${ alias }.${ field.trim() }` ) );
 	}
 
+	// Añadir soporte para relaciones
+	if ( getProps.relations && getProps.relations.length > 0 ) {
+		for ( const relation of getProps.relations ) {
+			builder.leftJoinAndSelect( `${ alias }.${ relation }`, relation );
+		}
+	}
+
 	getResponse.data = await builder.getMany();
 	return getResponse;
 
