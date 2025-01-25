@@ -25,21 +25,25 @@ export class ProductsService {
     private readonly handleErrorService: HandleErrorService
   ) { }
 
-  async create ( createProductDto: CreateProductDto, user: User ) {
+  async create ( createProductDto: CreateProductDto, user: User ): Promise<GetResponse<Partial<Product>>> {
 
     try {
 
-      const { images = [], ...productDetails } = createProductDto;
+      const productDetails = createProductDto;
 
       const product = this.productRepository.create( {
         ...productDetails,
-        images: images.map( image => this.productImageRepository.create( { url: image } ) ),
         user
       } );
 
       await this.productRepository.save( product );
+      const { user: _, ...rest } = product;
 
-      return { ...product, images };
+      return {
+        data: rest,
+        message: 'Product created',
+        statusCode: 201
+      };
 
     }
     catch ( error ) {
@@ -124,9 +128,9 @@ export class ProductsService {
 
   }
 
-  async update ( id: string, updateProductDto: UpdateProductDto, user: User ) {
+  async update ( id: string, updateProductDto: UpdateProductDto, user: User ): Promise<GetResponse<Partial<Product>>> {
 
-    const { images, ...productToUpdate } = updateProductDto;
+    const productToUpdate = updateProductDto;
 
     const product = await this.productRepository.preload( { id, ...productToUpdate } );
 
@@ -142,19 +146,18 @@ export class ProductsService {
 
     try {
 
-      if ( images ) {
-
-        await queryRunner.manager.delete( ProductImage, { product: id } );
-        product.images = images.map( image => this.productImageRepository.create( { url: image } ) );
-
-      }
-
       product.user = user;
       await queryRunner.manager.save( product );
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return this.findOne( id );
+      const { user: _, ...rest } = product;
+
+      return {
+        data: rest,
+        message: 'Product updated',
+        statusCode: 200
+      };
 
     } catch ( error ) {
       await queryRunner.rollbackTransaction(); // Deshacer los cambios

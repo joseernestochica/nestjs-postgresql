@@ -41,12 +41,6 @@ export class CreateProductDto {
 	@IsOptional()
 	tags?: string[];
 
-	@ApiProperty( { example: [ 'image1.jpg', 'image2.jpg' ], description: 'Images of products', nullable: true } )
-	@IsArray()
-	@IsString( { each: true } )
-	@IsOptional()
-	images?: string[];
-
 	@ApiProperty( { example: [ 'men' ], description: 'gneer of product', nullable: false } )
 	@IsIn( [ 'men', 'women', 'kid', 'unisex' ] )
 	gender: string;

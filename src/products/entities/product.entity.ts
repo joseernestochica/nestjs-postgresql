@@ -45,11 +45,13 @@ export class Product {
 	@Column( 'text', { array: true, default: [] } )
 	tags: string[];
 
-	// @Column()
-	// createdAt: Date;
+	@ApiProperty( { example: '2024-01-01T00:00:00Z', description: 'The creation date of the product' } )
+	@Column( { type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' } )
+	createdAt: Date;
 
-	// @Column()
-	// updatedAt: Date;
+	@ApiProperty( { example: '2024-01-01T00:00:00Z', description: 'The last update date of the product' } )
+	@Column( { type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' } )
+	updatedAt: Date;
 
 	@ApiProperty( { example: [ 'image1.jpg', 'image2.jpg' ], description: 'Images of products' } )
 	@OneToMany(

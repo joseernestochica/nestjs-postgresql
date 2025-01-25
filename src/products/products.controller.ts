@@ -36,6 +36,7 @@ export class ProductsController {
   }
 
   @Patch( ':id' )
+  @Auth()
   update (
     @Param( 'id', ParseUUIDPipe ) id: string,
     @Body() updateProductDto: UpdateProductDto,
