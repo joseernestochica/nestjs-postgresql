@@ -7,5 +7,7 @@ export interface GetResponse<T> {
 	lastPage?: number;
 	message?: string;
 	statusCode?: number;
+	token?: string;
+	refreshToken?: string;
 
 }

@@ -59,7 +59,7 @@ export class AuthService {
 
   }
 
-  async create ( createUserDto: CreateUserDto ) {
+  async create ( createUserDto: CreateUserDto ): Promise<GetResponse<User>> {
 
     try {
 
@@ -69,8 +69,10 @@ export class AuthService {
       delete user.password;
 
       return {
-        ...user,
-        token: this.getJwtToken( { id: user.id } )
+        data: user,
+        token: this.getJwtToken( { id: user.id } ),
+        message: 'User created successfully',
+        statusCode: 201
       };
 
     }
@@ -91,8 +93,7 @@ export class AuthService {
 
     if ( getParams.search ) {
       getParams.where = {
-        query: `user.fullName LIKE :s 
-          OR user.email LIKE :s`,
+        query: `user.fullName ILIKE :s OR user.email ILIKE :s`,
         params: {
           s: `%${ getParams.search }%`,
         }
@@ -135,8 +136,6 @@ export class AuthService {
       this.handleErrorService.handleNotFoundException( 'User not found' );
     }
 
-    delete user.password;
-
     return {
       data: user,
       message: 'User found',
@@ -145,13 +144,13 @@ export class AuthService {
 
   }
 
-  async login ( loginUserDto: LoginUserDto, ip?: string, isHashed = false ): Promise<any> {
+  async login ( loginUserDto: LoginUserDto, ip?: string, isHashed = false ): Promise<GetResponse<User>> {
 
     const { email, password } = loginUserDto;
 
     const user = await this.userRepository.findOne( {
-      where: { email },
-      select: [ 'id', 'password' ]
+      where: { email, isDeleted: false },
+      select: [ 'id', 'email', 'fullName', 'roles', 'password' ]
     } );
 
     if ( !user ) {
@@ -172,31 +171,46 @@ export class AuthService {
     delete user.password;
 
     return {
-      ...user,
+      data: user,
       token: this.getJwtToken( { id: user.id } ),
-      refreshToken: refreshTokenUid
+      refreshToken: refreshTokenUid,
+      message: 'Login successful',
+      statusCode: 200
     };
 
   }
 
-  async checkAuthStatus ( user: User ) {
+  async checkAuthStatus ( user: User ): Promise<GetResponse<User>> {
+
+    delete user.password;
+    delete user.isDeleted;
+    delete user.isActive;
 
     return {
-      ...user,
-      token: this.getJwtToken( { id: user.id } )
+      data: user,
+      token: this.getJwtToken( { id: user.id } ),
+      message: 'User authenticated',
+      statusCode: 200
     };
 
   }
 
-  async refreshToken ( updateTokenDto: UpdateRefreshTokenDto ): Promise<any> {
+  async refreshToken ( updateTokenDto: UpdateRefreshTokenDto ): Promise<GetResponse<User>> {
 
     const { refreshToken, userId, ip } = updateTokenDto;
 
     const userDb = await this.findOne( userId );
 
     const count = await this.refreshTokenRepository.count(
-      { where: { user: userDb.data as User, token: refreshToken, expires: MoreThan( new Date ) } }
+      {
+        where: {
+          user: { id: userId },
+          token: refreshToken,
+          expires: MoreThan( new Date() )
+        }
+      }
     );
+
     if ( count === 0 ) {
       this.handleErrorService.handleUnautorizedException( 'Invalid token' );
     }
@@ -241,6 +255,23 @@ export class AuthService {
     }
   }
 
+  async deleteRefreshToken ( id: string, token: string ): Promise<GetResponse<any>> {
+
+    try {
+
+      await this.refreshTokenRepository.delete( { user: { id }, token } );
+
+      return {
+        message: 'Refresh token deleted',
+        statusCode: 200
+      };
+
+    } catch ( error ) {
+      this.handleErrorService.handleDBException( error );
+    }
+
+  }
+
   async deleteUserSoft ( id: string ): Promise<GetResponse<User>> {
     try {
 
@@ -251,7 +282,8 @@ export class AuthService {
 
       const deactivatedUser = await this.userRepository.preload( {
         id,
-        isDeleted: true
+        isDeleted: true,
+        isActive: false
       } );
 
       await this.userRepository.save( deactivatedUser );
