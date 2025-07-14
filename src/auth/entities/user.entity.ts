@@ -1,5 +1,5 @@
 import { Product } from 'src/products/entities';
-import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { RefreshToken } from './';
 import * as bcrypt from 'bcrypt';
 import { UserImage } from './user-image.entity';
@@ -19,6 +19,27 @@ export class User {
 	@Column( 'text' )
 	fullName: string;
 
+	@Column( 'text', { nullable: true } )
+	phone: string;
+
+	@Column( 'text', { nullable: true } )
+	address: string;
+
+	@Column( 'text', { nullable: true } )
+	postalCode: string;
+
+	@Column( 'text', { nullable: true } )
+	city: string;
+
+	@Column( 'text', { nullable: true } )
+	province: string;
+
+	@Column( 'text', { nullable: true } )
+	country: string;
+
+	@Column( 'text', { nullable: true } )
+	nif: string;
+
 	@Column( 'bool', { default: true } )
 	isActive: boolean;
 
@@ -27,6 +48,12 @@ export class User {
 
 	@Column( 'text', { array: true, default: [ 'user' ] } )
 	roles: string[];
+
+	@CreateDateColumn()
+	createdAt: Date;
+
+	@UpdateDateColumn()
+	updatedAt: Date;
 
 	@OneToMany(
 		() => Product,
