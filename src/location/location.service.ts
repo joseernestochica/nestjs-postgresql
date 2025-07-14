@@ -1,34 +1,45 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { Country, State, City } from 'country-state-city';
 import { ICountry, IState, ICity } from 'country-state-city/lib/interface';
 import * as i18nIsoCountries from 'i18n-iso-countries';
 import { getProvinces, getCities } from 'spanishcities';
 import { Utils } from 'src/common/helpers';
 import { StateInterface } from 'src/location/interfaces';
+import { GetResponse } from 'src/common/interfaces';
+import { HandleErrorService } from 'src/common/services';
 
 @Injectable()
 export class LocationService {
 
-	getCountryByCode ( country: string | undefined, lang = 'es' ): string | any {
+	constructor (
+		private readonly handleErrorService: HandleErrorService
+	) { }
+
+	getCountryByCode ( country: string | undefined, lang = 'es' ): GetResponse<string> {
 
 		try {
 
-			if ( !country ) { return '' }
+			if ( !country ) { throw ( 'Country is required' ) }
 
 			i18nIsoCountries.registerLocale( require( `i18n-iso-countries/langs/${ lang }.json` ) );
-			return i18nIsoCountries.getName( country, lang );
+			return {
+				data: i18nIsoCountries.getName( country, lang ),
+				statusCode: 200,
+				message: 'Country fetched successfully'
+			};
 
 		} catch ( error ) {
-			throw new InternalServerErrorException();
+			this.handleErrorService.handleBadRequestException( error );
 		}
 
 	}
 
-	getStatebyCode ( country: string | undefined, state: string | undefined ): string | any {
+	getStatebyCode ( country: string | undefined, state: string | undefined ): GetResponse<string> {
 
 		try {
 
-			if ( !country || !state ) { return '' }
+			if ( !country || !state ) { throw ( 'Country and state are required' ) }
+
 			country = country.toUpperCase();
 			state = state.toUpperCase();
 
@@ -39,37 +50,55 @@ export class LocationService {
 			if ( country === 'ES' ) {
 
 				const statesEs: any[] = getProvinces();
-				if ( !statesEs || statesEs.length === 0 ) return '';
+				if ( !statesEs || statesEs.length === 0 ) {
+					return {
+						data: '',
+						statusCode: 200,
+						message: 'State by code not found'
+					};
+				}
 
 				for ( const stateEs of statesEs ) {
 					if ( stateEs.code === state )
-						return Utils.capitalize( stateEs.name );
+						return {
+							data: Utils.capitalize( stateEs.name ),
+							statusCode: 200,
+							message: 'State by code found'
+						};
 				}
 
 			} else {
-				return State.getStateByCodeAndCountry( state, country )?.name || '';
+				return {
+					data: State.getStateByCodeAndCountry( state, country )?.name || '',
+					statusCode: 200,
+					message: 'State by code found'
+				};
 			}
 
-			return '';
+			return {
+				data: '',
+				statusCode: 200,
+				message: 'State by code not found'
+			};
 
 		} catch ( error ) {
-			throw new InternalServerErrorException();
+			this.handleErrorService.handleBadRequestException( error );
 		}
 
 	}
 
-	getCitiesByCountryAndState ( country: string, state: string ): StateInterface[] | any {
+	getCitiesByCountryAndState ( country: string, state: string ): GetResponse<StateInterface[]> {
 
 		try {
 
 			let cities: StateInterface[] = [];
 
 			if ( !country || country === '' || !state || state === '' ) {
-				return cities;
+				throw ( 'Country and state are required' )
 			}
 
 			if ( state === 'no-value' ) {
-				cities = [ { id: 'no-value', name: this.getCountryByCode( country ) } ];
+				cities = [ { id: 'no-value', name: this.getCountryByCode( country ).data as string } ];
 			}
 
 			country = country.toUpperCase();
@@ -79,7 +108,11 @@ export class LocationService {
 
 				const citiesEs: any[] = getCities( state );
 				if ( !citiesEs || citiesEs.length === 0 ) {
-					return cities;
+					return {
+						data: [],
+						statusCode: 200,
+						message: 'Cities by country and state not found'
+					};
 				};
 
 				for ( const cityEs of citiesEs ) {
@@ -91,7 +124,7 @@ export class LocationService {
 				const citiesAll: ICity[] = City.getCitiesOfState( country, state );
 
 				if ( !citiesAll || citiesAll.length === 0 ) {
-					cities = [ { id: 'no-value', name: this.getStatebyCode( country, state ) } ];
+					cities = [ { id: 'no-value', name: this.getStatebyCode( country, state ).data as string } ];
 				}
 
 				for ( const city of citiesAll ) {
@@ -99,15 +132,19 @@ export class LocationService {
 				}
 			}
 
-			return cities;
+			return {
+				data: cities,
+				statusCode: 200,
+				message: 'Cities by country and state fetched successfully'
+			};
 
 		} catch ( error ) {
-			throw new InternalServerErrorException();
+			this.handleErrorService.handleBadRequestException( error );
 		}
 
 	}
 
-	getAllCountries ( lang?: string ): ICountry[] {
+	getAllCountries ( lang?: string ): GetResponse<ICountry[]> {
 
 		try {
 
@@ -117,15 +154,19 @@ export class LocationService {
 			i18nIsoCountries.registerLocale( require( `i18n-iso-countries/langs/${ lang ? lang : 'es' }.json` ) );
 			countries.map( country => country.name = i18nIsoCountries.getName( country.isoCode, lang ? lang : 'es' ) );
 
-			return countries.sort( ( a, b ) => ( a.name > b.name ) ? 1 : ( ( b.name > a.name ) ? -1 : 0 ) );
+			return {
+				data: countries.sort( ( a, b ) => ( a.name > b.name ) ? 1 : ( ( b.name > a.name ) ? -1 : 0 ) ),
+				statusCode: 200,
+				message: 'Countries fetched successfully'
+			};
 
 		} catch ( error ) {
-			throw new InternalServerErrorException();
+			this.handleErrorService.handleBadRequestException( error );
 		}
 
 	}
 
-	getStatesByCountry ( countryIso: string ): StateInterface[] {
+	getStatesByCountry ( countryIso: string ): GetResponse<StateInterface[]> {
 
 		try {
 
@@ -134,60 +175,79 @@ export class LocationService {
 			if ( countryIso === 'ES' ) {
 
 				const statesEs: any[] = getProvinces();
-				if ( !statesEs || statesEs.length === 0 ) return [];
+				if ( !statesEs || statesEs.length === 0 ) {
+					return {
+						data: [],
+						statusCode: 200,
+						message: 'States fetched successfully'
+					};
+				}
 				statesEs.forEach( state => states.push( { id: state.code, name: Utils.capitalize( state.name ) } ) );
 
 			} else {
 
 				const statesAll: IState[] = State.getStatesOfCountry( countryIso );
 				if ( !statesAll || statesAll.length === 0 ) {
-					states = [ { id: 'no-value', name: this.getCountryByCode( countryIso ) } ];
+					states = [ { id: 'no-value', name: this.getCountryByCode( countryIso ).data as string } ];
 				}
 
 				statesAll.forEach( state => states.push( { id: state.isoCode, name: state.name } ) );
 
 			}
 
-			return states;
+			return {
+				data: states,
+				statusCode: 200,
+				message: 'States fetched successfully'
+			};
 
 		} catch ( error ) {
-			throw new InternalServerErrorException();
+			this.handleErrorService.handleBadRequestException( error );
 		}
 
 	}
 
-	getCityByCode ( country: string | undefined, state: string | undefined, city: string | undefined ): string | any {
+	getCityByCode ( country: string | undefined, state: string | undefined, city: string | undefined ): GetResponse<string> {
 
 		try {
 
-			if ( !country || !state || !city ) { return '' }
+			if ( !country || !state || !city ) {
+				throw ( 'Country, state and city are required' );
+			}
 
 			country = country.toUpperCase();
 			state = state.toUpperCase();
 
 			const cities = this.getCitiesByCountryAndState( country, state );
 
-			if ( !cities || cities.length === 0 ) {
-				return '';
+			if ( !cities || cities.data.length === 0 ) {
+				return {
+					data: '',
+					statusCode: 200,
+					message: 'City by code not found'
+				};
 			};
 
-			for ( const cityArr of cities ) {
+			for ( const cityArr of cities.data as StateInterface[] ) {
 				if ( Utils.formatUrlString( city ) === Utils.formatUrlString( cityArr.id ) ) {
-					return ( cityArr.name );
+					return {
+						data: cityArr.name,
+						statusCode: 200,
+						message: 'City by code found'
+					};
 				}
 			}
 
-			return '';
+			return {
+				data: '',
+				statusCode: 200,
+				message: 'City by code not found'
+			};
 
 		} catch ( error ) {
-			throw new InternalServerErrorException();
+			this.handleErrorService.handleBadRequestException( error );
 		}
 
 	}
-
-
-
-
-
 
 }

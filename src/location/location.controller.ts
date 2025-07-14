@@ -15,11 +15,7 @@ export class LocationController {
 		@Query( 'lang' ) lang?: string,
 	) {
 
-		return {
-			message: 'list of countries',
-			statusCode: 200,
-			data: { countries: this.locationService.getAllCountries( lang ) }
-		};
+		return this.locationService.getAllCountries( lang );
 
 	}
 
@@ -29,11 +25,7 @@ export class LocationController {
 		@Query( 'country_iso' ) countryIso?: string | undefined,
 	) {
 
-		return {
-			message: 'Country by code',
-			statusCode: 200,
-			data: { country: this.locationService.getCountryByCode( countryIso, lang ) }
-		};
+		return this.locationService.getCountryByCode( countryIso, lang );
 
 	}
 
@@ -42,11 +34,7 @@ export class LocationController {
 		@Query( 'country_iso' ) countryIso?: string | undefined,
 	) {
 
-		return {
-			message: 'States by country',
-			statusCode: 200,
-			data: { states: this.locationService.getStatesByCountry( countryIso ? countryIso.toUpperCase() : 'ES' ) }
-		};
+		return this.locationService.getStatesByCountry( countryIso ? countryIso.toUpperCase() : 'ES' );
 
 	}
 
@@ -56,11 +44,7 @@ export class LocationController {
 		@Query( 'country_iso' ) countryIso?: string | undefined,
 	) {
 
-		return {
-			message: 'State by code',
-			statusCode: 200,
-			data: { cities: this.locationService.getStatebyCode( countryIso, stateId ) }
-		};
+		return this.locationService.getStatebyCode( countryIso, stateId );
 
 	}
 
@@ -70,11 +54,7 @@ export class LocationController {
 		@Query( 'country_iso' ) countryIso?: string | undefined,
 	) {
 
-		return {
-			message: 'list of cities by country and state',
-			statusCode: 200,
-			data: { cities: this.locationService.getCitiesByCountryAndState( countryIso, stateId ) }
-		};
+		return this.locationService.getCitiesByCountryAndState( countryIso, stateId );
 
 	}
 
@@ -85,11 +65,7 @@ export class LocationController {
 		@Query( 'city_id' ) cityId?: string | undefined,
 	) {
 
-		return {
-			message: 'City by code',
-			statusCode: 200,
-			data: { city: this.locationService.getCityByCode( countryIso, stateId, cityId ) }
-		};
+		return this.locationService.getCityByCode( countryIso, stateId, cityId );
 
 	}
 
